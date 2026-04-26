@@ -1,0 +1,535 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);background:var(--color-background-tertiary);}
+.app{min-height:600px;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* Login */
+.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.5rem;min-height:500px;}
+.login-logo{font-size:22px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:2.5rem;}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:420px;margin-bottom:1.5rem;}
+.role-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:border-color 0.15s;}
+.role-card:hover{border-color:var(--color-border-primary);}
+.role-card.selected{border:2px solid #1D9E75;}
+.role-icon{font-size:28px;margin-bottom:8px;}
+.role-name{font-size:14px;font-weight:500;color:var(--color-text-primary);}
+.role-desc{font-size:12px;color:var(--color-text-secondary);margin-top:3px;}
+.login-btn{width:100%;max-width:420px;height:42px;background:#1D9E75;color:#fff;border:none;border-radius:var(--border-radius-md);font-size:15px;font-weight:500;cursor:pointer;}
+.login-btn:hover{background:#0F6E56;}
+
+/* Nav */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:52px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);}
+.nav-brand{font-size:16px;font-weight:500;color:var(--color-text-primary);}
+.nav-badge{font-size:11px;padding:2px 8px;background:#EAF3DE;color:#3B6D11;border-radius:20px;margin-left:6px;font-weight:500;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-pts{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.nav-avatar{width:30px;height:30px;border-radius:50%;background:#9FE1CB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#085041;cursor:pointer;}
+.logout-btn{font-size:12px;color:var(--color-text-secondary);cursor:pointer;padding:4px 8px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);}
+.logout-btn:hover{background:var(--color-background-secondary);}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);padding:0 1.25rem;}
+.tab{padding:10px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500;}
+
+/* Content */
+.content{padding:1.25rem;}
+
+/* Cards */
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
+.card-title{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:12px;padding-bottom:8px;border-bottom:0.5px solid var(--color-border-tertiary);}
+
+/* Stat row */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;}
+.stat-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;text-align:center;}
+.stat-n{font-size:22px;font-weight:500;color:var(--color-text-primary);}
+.stat-l{font-size:11px;color:var(--color-text-secondary);margin-top:2px;}
+
+/* Task list */
+.task-item{padding:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:8px;background:var(--color-background-primary);}
+.task-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.task-name{font-size:14px;font-weight:500;color:var(--color-text-primary);}
+.task-pts{font-size:12px;font-weight:500;color:#1D9E75;background:#EAF3DE;padding:2px 8px;border-radius:20px;}
+.task-desc{font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.5;}
+.task-meta{display:flex;gap:8px;align-items:center;}
+.tag{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--color-background-secondary);color:var(--color-text-secondary);}
+.task-actions{margin-top:10px;display:flex;gap:8px;}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);cursor:pointer;background:var(--color-background-primary);color:var(--color-text-primary);}
+.btn-sm:hover{background:var(--color-background-secondary);}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75;}
+.btn-primary:hover{background:#0F6E56;}
+.btn-danger{color:#A32D2D;border-color:#F7C1C1;}
+
+/* Leaderboard */
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary);}
+.lb-rank{font-size:14px;font-weight:500;color:var(--color-text-secondary);min-width:24px;}
+.lb-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;}
+.lb-name{flex:1;font-size:14px;color:var(--color-text-primary);}
+.lb-college{font-size:11px;color:var(--color-text-secondary);}
+.lb-pts{font-size:14px;font-weight:500;color:var(--color-text-primary);}
+.lb-badge{font-size:14px;}
+
+/* Badges */
+.badge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.badge-item{text-align:center;padding:12px 8px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary);}
+.badge-icon{font-size:24px;margin-bottom:4px;}
+.badge-name{font-size:11px;font-weight:500;color:var(--color-text-primary);}
+.badge-desc{font-size:10px;color:var(--color-text-secondary);margin-top:2px;}
+.badge-item.locked{opacity:0.35;}
+
+/* Submission modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem;}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);padding:1.5rem;width:100%;max-width:440px;border:0.5px solid var(--color-border-secondary);}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:12px;}
+.modal textarea{width:100%;min-height:80px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:10px;font-size:13px;color:var(--color-text-primary);background:var(--color-background-primary);resize:vertical;margin-bottom:10px;}
+.modal input[type=text]{width:100%;height:36px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:0 10px;font-size:13px;color:var(--color-text-primary);background:var(--color-background-primary);margin-bottom:10px;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+.score-result{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;margin:10px 0;font-size:13px;color:var(--color-text-primary);line-height:1.6;}
+.score-big{font-size:28px;font-weight:500;color:#1D9E75;}
+
+/* Create task form */
+.form-row{margin-bottom:10px;}
+.form-row label{display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:4px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:13px;color:var(--color-text-primary);background:var(--color-background-primary);}
+.form-row textarea{min-height:60px;resize:vertical;}
+
+/* Streak */
+.streak-row{display:flex;gap:6px;flex-wrap:wrap;}
+.streak-day{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:500;}
+.streak-active{background:#1D9E75;}
+.streak-empty{background:var(--color-background-secondary);}
+
+@media (prefers-color-scheme:dark){
+  .nav-badge{background:#27500A;color:#C0DD97;}
+  .task-pts{background:#27500A;color:#C0DD97;}
+}
+</style>
+
+<!-- LOGIN SCREEN -->
+<div class="app">
+<div id="loginScreen" class="screen active">
+  <div class="login-wrap">
+    <div class="login-logo">CampusConnect</div>
+    <div class="login-sub">Automated Campus Ambassador Management Platform</div>
+    <div class="role-grid">
+      <div class="role-card" id="roleOrg" onclick="selectRole('org')">
+        <div class="role-icon">🏢</div>
+        <div class="role-name">Organization</div>
+        <div class="role-desc">Manage ambassadors & tasks</div>
+      </div>
+      <div class="role-card" id="roleAmb" onclick="selectRole('amb')">
+        <div class="role-icon">🎓</div>
+        <div class="role-name">Ambassador</div>
+        <div class="role-desc">Complete tasks & earn rewards</div>
+      </div>
+    </div>
+    <button class="login-btn" onclick="login()">Enter Platform</button>
+  </div>
+</div>
+
+<!-- ORG SCREEN -->
+<div id="orgScreen" class="screen">
+  <div class="nav">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="nav-brand">CampusConnect</span>
+      <span class="nav-badge">Org Manager</span>
+    </div>
+    <div class="nav-right">
+      <span class="logout-btn" onclick="logout()">Logout</span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="orgTab('dashboard',this)">Dashboard</div>
+    <div class="tab" onclick="orgTab('tasks',this)">Tasks</div>
+    <div class="tab" onclick="orgTab('leaderboard',this)">Leaderboard</div>
+    <div class="tab" onclick="orgTab('ambassadors',this)">Ambassadors</div>
+  </div>
+  <div class="content">
+
+    <div id="org-dashboard">
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-n">24</div><div class="stat-l">Ambassadors</div></div>
+        <div class="stat-box"><div class="stat-n">12</div><div class="stat-l">Active Tasks</div></div>
+        <div class="stat-box"><div class="stat-n">87</div><div class="stat-l">Submissions</div></div>
+        <div class="stat-box"><div class="stat-n">92%</div><div class="stat-l">Retention Rate</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Submissions (pending review)</div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Priya Sharma — Instagram Reel Post</span><span class="task-pts">+150 pts</span></div>
+          <div class="task-desc">Posted a reel about our event. Link: instagram.com/p/xyz123. Got 2.3k views.</div>
+          <div class="task-actions">
+            <button class="btn-sm btn-primary" onclick="aiReview(this,'Instagram reel promoting an event, 2.3k views, link provided')">AI Score</button>
+            <button class="btn-sm" onclick="approve(this,150)">Approve</button>
+            <button class="btn-sm btn-danger" onclick="reject(this)">Reject</button>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Rahul Verma — Referral Drive</span><span class="task-pts">+200 pts</span></div>
+          <div class="task-desc">Referred 3 students from BITS Pilani. Their email IDs attached.</div>
+          <div class="task-actions">
+            <button class="btn-sm btn-primary" onclick="aiReview(this,'Referral task: 3 students referred from BITS Pilani with email IDs provided')">AI Score</button>
+            <button class="btn-sm" onclick="approve(this,200)">Approve</button>
+            <button class="btn-sm btn-danger" onclick="reject(this)">Reject</button>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Ananya Roy — LinkedIn Post</span><span class="task-pts">+100 pts</span></div>
+          <div class="task-desc">Wrote about our platform on LinkedIn. Got 45 likes and 8 comments.</div>
+          <div class="task-actions">
+            <button class="btn-sm btn-primary" onclick="aiReview(this,'LinkedIn post about platform, 45 likes 8 comments')">AI Score</button>
+            <button class="btn-sm" onclick="approve(this,100)">Approve</button>
+            <button class="btn-sm btn-danger" onclick="reject(this)">Reject</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="org-tasks" style="display:none;">
+      <div class="card">
+        <div class="card-title">Create New Task</div>
+        <div class="form-row"><label>Task Name</label><input type="text" id="newTaskName" placeholder="e.g. Instagram Story Post" /></div>
+        <div class="form-row"><label>Description</label><textarea id="newTaskDesc" placeholder="What should ambassadors do?"></textarea></div>
+        <div class="form-row"><label>Points</label><input type="text" id="newTaskPts" placeholder="e.g. 150" /></div>
+        <div class="form-row"><label>Category</label>
+          <select id="newTaskCat">
+            <option>Social Media</option><option>Referral</option><option>Content Creation</option><option>Event Promotion</option>
+          </select>
+        </div>
+        <button class="btn-sm btn-primary" onclick="createTask()" style="margin-top:4px;">Create Task</button>
+      </div>
+      <div class="card" id="orgTaskList">
+        <div class="card-title">Active Tasks</div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Instagram Story Post</span><span class="task-pts">+150 pts</span></div>
+          <div class="task-desc">Post a story mentioning our brand and use the official hashtag.</div>
+          <div class="task-meta"><span class="tag">Social Media</span><span class="tag">18 submitted</span></div>
+        </div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Refer 3 Students</span><span class="task-pts">+200 pts</span></div>
+          <div class="task-desc">Refer 3 students from your college and share their contact details.</div>
+          <div class="task-meta"><span class="tag">Referral</span><span class="tag">9 submitted</span></div>
+        </div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">LinkedIn Article</span><span class="task-pts">+100 pts</span></div>
+          <div class="task-desc">Write a 300+ word article about our product on LinkedIn.</div>
+          <div class="task-meta"><span class="tag">Content</span><span class="tag">6 submitted</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="org-leaderboard" style="display:none;">
+      <div class="card">
+        <div class="card-title">Top Performers — All Time</div>
+        <div id="lbList"></div>
+      </div>
+    </div>
+
+    <div id="org-ambassadors" style="display:none;">
+      <div class="card">
+        <div class="card-title">All Ambassadors (24)</div>
+        <div id="ambList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- AMBASSADOR SCREEN -->
+<div id="ambScreen" class="screen">
+  <div class="nav">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="nav-brand">CampusConnect</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-pts" id="ambPtsNav">1,240 pts</span>
+      <div class="nav-avatar">PS</div>
+      <span class="logout-btn" onclick="logout()">Logout</span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="ambTab('home',this)">Home</div>
+    <div class="tab" onclick="ambTab('tasks',this)">Tasks</div>
+    <div class="tab" onclick="ambTab('leaderboard',this)">Leaderboard</div>
+    <div class="tab" onclick="ambTab('badges',this)">Badges</div>
+  </div>
+  <div class="content">
+
+    <div id="amb-home">
+      <div class="card" style="background:linear-gradient(135deg,#E1F5EE,#9FE1CB);border-color:#5DCAA5;">
+        <div style="font-size:13px;color:#085041;margin-bottom:4px;">Welcome back, Priya!</div>
+        <div style="font-size:24px;font-weight:500;color:#04342C;">1,240 Points</div>
+        <div style="font-size:13px;color:#085041;margin-top:4px;">Rank #3 · BITS Pilani</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Weekly Streak</div>
+        <div class="streak-row" id="streakRow"></div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;">5-day streak — keep it up!</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tasks Due This Week</div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Instagram Story Post</span><span class="task-pts">+150 pts</span></div>
+          <div class="task-desc">Post a story mentioning our brand with the official hashtag #CampusConnect.</div>
+          <div class="task-actions"><button class="btn-sm btn-primary" onclick="openSubmit('Instagram Story Post',150)">Submit Proof</button></div>
+        </div>
+        <div class="task-item">
+          <div class="task-header"><span class="task-name">Refer 3 Students</span><span class="task-pts">+200 pts</span></div>
+          <div class="task-desc">Refer 3 students from your college with their contact details.</div>
+          <div class="task-actions"><button class="btn-sm btn-primary" onclick="openSubmit('Referral Drive',200)">Submit Proof</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="amb-tasks" style="display:none;">
+      <div class="task-item">
+        <div class="task-header"><span class="task-name">Instagram Story Post</span><span class="task-pts">+150 pts</span></div>
+        <div class="task-desc">Post a story mentioning our brand and use the official hashtag. Screenshot required.</div>
+        <div class="task-meta"><span class="tag">Social Media</span><span class="tag">Deadline: 30 Apr</span></div>
+        <div class="task-actions"><button class="btn-sm btn-primary" onclick="openSubmit('Instagram Story Post',150)">Submit Proof</button></div>
+      </div>
+      <div class="task-item">
+        <div class="task-header"><span class="task-name">Refer 3 Students</span><span class="task-pts">+200 pts</span></div>
+        <div class="task-desc">Refer 3 students and share their emails or phone numbers.</div>
+        <div class="task-meta"><span class="tag">Referral</span><span class="tag">Deadline: 2 May</span></div>
+        <div class="task-actions"><button class="btn-sm btn-primary" onclick="openSubmit('Referral Drive',200)">Submit Proof</button></div>
+      </div>
+      <div class="task-item" style="opacity:0.6;">
+        <div class="task-header"><span class="task-name">LinkedIn Article</span><span class="task-pts">+100 pts</span></div>
+        <div class="task-desc">Write a 300+ word article about our platform.</div>
+        <div class="task-meta"><span class="tag">Content</span><span class="tag" style="background:#EAF3DE;color:#3B6D11;">Completed</span></div>
+      </div>
+    </div>
+
+    <div id="amb-leaderboard" style="display:none;">
+      <div class="card"><div class="card-title">Leaderboard</div><div id="ambLbList"></div></div>
+    </div>
+
+    <div id="amb-badges" style="display:none;">
+      <div class="card">
+        <div class="card-title">Your Badges</div>
+        <div class="badge-grid" id="badgeGrid"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SUBMIT MODAL -->
+<div id="submitModal" class="overlay" style="display:none;">
+  <div class="modal">
+    <h3 id="modalTitle">Submit Proof</h3>
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px;">Describe what you did and paste any links as proof.</div>
+    <textarea id="proofText" placeholder="e.g. Posted the story at 5pm, here is the link: instagram.com/..."></textarea>
+    <input type="text" id="proofLink" placeholder="Link to proof (optional)" />
+    <div id="aiScoreBox" style="display:none;" class="score-result"></div>
+    <div class="modal-btns">
+      <button class="btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn-sm btn-primary" id="aiScoreBtn" onclick="ambAiScore()">AI Auto-Score</button>
+      <button class="btn-sm btn-primary" id="submitBtn" onclick="submitTask()" style="display:none;">Submit</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let currentRole = null;
+let ambPoints = 1240;
+let currentTask = {name:'',pts:0};
+
+const lbData = [
+  {name:'Arjun Mehta',college:'IIT Delhi',pts:2100,avatar:'AM',color:'#9FE1CB',tc:'#085041',badges:'🏆'},
+  {name:'Sneha Patel',college:'NIT Surat',pts:1850,avatar:'SP',color:'#AFA9EC',tc:'#26215C',badges:'🥈'},
+  {name:'Priya Sharma',college:'BITS Pilani',pts:1240,avatar:'PS',color:'#F5C4B3',tc:'#4A1B0C',badges:'🥉'},
+  {name:'Rahul Verma',college:'VIT Vellore',pts:980,avatar:'RV',color:'#B5D4F4',tc:'#042C53',badges:''},
+  {name:'Ananya Roy',college:'Jadavpur Univ',pts:760,avatar:'AR',color:'#C0DD97',tc:'#173404',badges:''},
+  {name:'Dev Singh',college:'DTU Delhi',pts:640,avatar:'DS',color:'#FAC775',tc:'#412402',badges:''},
+];
+
+const badgesData = [
+  {icon:'🔥',name:'On Fire',desc:'5-day streak',unlocked:true},
+  {icon:'⭐',name:'Star Post',desc:'100+ likes on post',unlocked:true},
+  {icon:'🎯',name:'Referral Pro',desc:'5+ referrals',unlocked:false},
+  {icon:'✍️',name:'Content King',desc:'3 articles written',unlocked:false},
+  {icon:'📱',name:'Social Buzz',desc:'10 social posts',unlocked:true},
+  {icon:'🏅',name:'Top 5',desc:'Leaderboard top 5',unlocked:true},
+  {icon:'🚀',name:'Rocket Start',desc:'First task done',unlocked:true},
+  {icon:'💎',name:'Diamond',desc:'2000+ points',unlocked:false},
+];
+
+function selectRole(r){
+  currentRole=r;
+  document.getElementById('roleOrg').classList.toggle('selected',r==='org');
+  document.getElementById('roleAmb').classList.toggle('selected',r==='amb');
+}
+function login(){
+  if(!currentRole){selectRole('amb');return;}
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById(currentRole==='org'?'orgScreen':'ambScreen').classList.add('active');
+  if(currentRole==='amb'){buildStreak();buildBadges();}
+  buildLb();
+}
+function logout(){
+  ['orgScreen','ambScreen'].forEach(s=>document.getElementById(s).classList.remove('active'));
+  document.getElementById('loginScreen').classList.add('active');
+  currentRole=null;
+  document.getElementById('roleOrg').classList.remove('selected');
+  document.getElementById('roleAmb').classList.remove('selected');
+}
+
+function orgTab(name,el){
+  ['dashboard','tasks','leaderboard','ambassadors'].forEach(t=>{
+    document.getElementById('org-'+t).style.display='none';
+  });
+  document.getElementById('org-'+name).style.display='block';
+  document.querySelectorAll('#orgScreen .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(name==='ambassadors') buildAmbList();
+}
+function ambTab(name,el){
+  ['home','tasks','leaderboard','badges'].forEach(t=>{
+    document.getElementById('amb-'+t).style.display='none';
+  });
+  document.getElementById('amb-'+name).style.display='block';
+  document.querySelectorAll('#ambScreen .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function buildLb(){
+  const html=lbData.map((a,i)=>`<div class="lb-row">
+    <div class="lb-rank">${i+1}</div>
+    <div class="lb-avatar" style="background:${a.color};color:${a.tc};">${a.avatar}</div>
+    <div style="flex:1;"><div class="lb-name">${a.name}</div><div class="lb-college">${a.college}</div></div>
+    <div class="lb-pts">${a.pts.toLocaleString()} pts</div>
+    <div class="lb-badge">${a.badges}</div>
+  </div>`).join('');
+  ['lbList','ambLbList'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+}
+function buildAmbList(){
+  const el=document.getElementById('ambList');
+  if(!el)return;
+  el.innerHTML=lbData.concat([
+    {name:'Kiran Nair',college:'Amrita Univ',pts:520,avatar:'KN',color:'#D3D1C7',tc:'#2C2C2A'},
+    {name:'Tanvi Gupta',college:'SRM Univ',pts:430,avatar:'TG',color:'#F4C0D1',tc:'#4B1528'},
+  ]).map(a=>`<div class="lb-row">
+    <div class="lb-avatar" style="background:${a.color};color:${a.tc};">${a.avatar}</div>
+    <div style="flex:1;"><div class="lb-name">${a.name}</div><div class="lb-college">${a.college}</div></div>
+    <div class="lb-pts">${a.pts.toLocaleString()} pts</div>
+  </div>`).join('');
+}
+function buildStreak(){
+  const el=document.getElementById('streakRow');
+  if(!el)return;
+  const days=['M','T','W','T','F','S','S'];
+  el.innerHTML=days.map((d,i)=>`<div class="streak-day ${i<5?'streak-active':'streak-empty'}" style="${i>=5?'color:var(--color-text-secondary);':''}">${d}</div>`).join('');
+}
+function buildBadges(){
+  const el=document.getElementById('badgeGrid');
+  if(!el)return;
+  el.innerHTML=badgesData.map(b=>`<div class="badge-item ${b.unlocked?'':'locked'}">
+    <div class="badge-icon">${b.icon}</div>
+    <div class="badge-name">${b.name}</div>
+    <div class="badge-desc">${b.desc}</div>
+  </div>`).join('');
+}
+
+function createTask(){
+  const name=document.getElementById('newTaskName').value.trim();
+  const desc=document.getElementById('newTaskDesc').value.trim();
+  const pts=document.getElementById('newTaskPts').value.trim();
+  const cat=document.getElementById('newTaskCat').value;
+  if(!name||!desc||!pts){alert('Fill all fields');return;}
+  const list=document.getElementById('orgTaskList');
+  const div=document.createElement('div');
+  div.className='task-item';
+  div.innerHTML=`<div class="task-header"><span class="task-name">${name}</span><span class="task-pts">+${pts} pts</span></div>
+  <div class="task-desc">${desc}</div>
+  <div class="task-meta"><span class="tag">${cat}</span><span class="tag">0 submitted</span></div>`;
+  list.appendChild(div);
+  document.getElementById('newTaskName').value='';
+  document.getElementById('newTaskDesc').value='';
+  document.getElementById('newTaskPts').value='';
+}
+
+async function aiReview(btn, context){
+  btn.textContent='Scoring...';btn.disabled=true;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",max_tokens:1000,
+      messages:[{role:"user",content:`You are an ambassador task reviewer. Score this submission out of 100 and give a 1-sentence verdict. Task submission: "${context}". Reply ONLY with JSON: {"score":<number>,"verdict":"<one sentence>"}`}]
+    })});
+    const d=await res.json();
+    const txt=d.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+    const j=JSON.parse(txt);
+    const parent=btn.closest('.task-item');
+    const scoreDiv=document.createElement('div');
+    scoreDiv.className='score-result';
+    scoreDiv.innerHTML=`<span class="score-big">${j.score}/100</span><br><span>${j.verdict}</span>`;
+    btn.parentElement.insertBefore(scoreDiv,btn);
+    btn.remove();
+  }catch(e){btn.textContent='Retry';btn.disabled=false;}
+}
+function approve(btn,pts){
+  const item=btn.closest('.task-item');
+  item.style.opacity='0.5';
+  item.querySelectorAll('button').forEach(b=>b.remove());
+  const tag=document.createElement('span');
+  tag.className='tag';tag.style.background='#EAF3DE';tag.style.color='#3B6D11';tag.textContent='Approved +'+pts+' pts';
+  item.querySelector('.task-meta')||item.appendChild(document.createElement('div'));
+  item.appendChild(tag);
+}
+function reject(btn){
+  const item=btn.closest('.task-item');
+  item.style.opacity='0.4';
+  item.querySelectorAll('button').forEach(b=>b.remove());
+}
+
+function openSubmit(name,pts){
+  currentTask={name,pts};
+  document.getElementById('modalTitle').textContent='Submit: '+name;
+  document.getElementById('proofText').value='';
+  document.getElementById('proofLink').value='';
+  document.getElementById('aiScoreBox').style.display='none';
+  document.getElementById('submitBtn').style.display='none';
+  document.getElementById('aiScoreBtn').style.display='inline-block';
+  document.getElementById('submitModal').style.display='flex';
+}
+function closeModal(){document.getElementById('submitModal').style.display='none';}
+
+async function ambAiScore(){
+  const proof=document.getElementById('proofText').value.trim();
+  if(!proof){alert('Please describe your submission first.');return;}
+  const btn=document.getElementById('aiScoreBtn');
+  btn.textContent='Scoring...';btn.disabled=true;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",max_tokens:1000,
+      messages:[{role:"user",content:`You are an ambassador program task auto-scorer. Task: "${currentTask.name}". Submission: "${proof}". Score out of 100 and give a short encouraging 1-2 sentence feedback. Reply ONLY with JSON: {"score":<number>,"feedback":"<text>"}`}]
+    })});
+    const d=await res.json();
+    const txt=d.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+    const j=JSON.parse(txt);
+    const box=document.getElementById('aiScoreBox');
+    box.style.display='block';
+    box.innerHTML=`<span class="score-big">${j.score}/100</span><br><span style="font-size:13px;">${j.feedback}</span>`;
+    document.getElementById('submitBtn').style.display='inline-block';
+    btn.style.display='none';
+  }catch(e){btn.textContent='Retry';btn.disabled=false;}
+}
+function submitTask(){
+  closeModal();
+  ambPoints+=currentTask.pts;
+  document.getElementById('ambPtsNav').textContent=ambPoints.toLocaleString()+' pts';
+  lbData[2].pts=ambPoints;
+  lbData.sort((a,b)=>b.pts-a.pts);
+  buildLb();
+  const banner=document.createElement('div');
+  banner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:10px 20px;border-radius:var(--border-radius-md);font-size:14px;z-index:200;';
+  banner.textContent='Task submitted! +'+currentTask.pts+' points earned';
+  document.body.appendChild(banner);
+  setTimeout(()=>banner.remove(),2500);
+}
+</script>

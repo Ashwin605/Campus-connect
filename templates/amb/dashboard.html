@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% block title %}Ambassador Dashboard — CampusConnect{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-label">Dashboard</div>
+            <a class="sidebar-link active" onclick="showTab('home', this)"><i class="fas fa-home"></i><span>Home</span></a>
+            <a class="sidebar-link" onclick="showTab('tasks', this)"><i class="fas fa-tasks"></i><span>Tasks</span><span class="sidebar-count">{{ tasks|length }}</span></a>
+            <a class="sidebar-link" onclick="showTab('submissions', this)"><i class="fas fa-paper-plane"></i><span>My Submissions</span></a>
+            <a class="sidebar-link" onclick="showTab('leaderboard', this)"><i class="fas fa-trophy"></i><span>Leaderboard</span></a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Rewards</div>
+            <a class="sidebar-link" onclick="showTab('badges', this)"><i class="fas fa-medal"></i><span>Badges</span></a>
+            <a class="sidebar-link" onclick="showTab('events', this)"><i class="fas fa-calendar-alt"></i><span>Events</span></a>
+            <a class="sidebar-link" onclick="showTab('wallet', this)"><i class="fas fa-wallet"></i><span>Wallet</span></a>
+            <a class="sidebar-link" onclick="showTab('inbox', this)"><i class="fas fa-envelope"></i><span>Inbox</span>{% if messages %}<span class="sidebar-count">{{ messages|length }}</span>{% endif %}</a>
+        </div>
+    </aside>
+    <div class="dashboard-main">
+        <!-- Home Tab -->
+        <div class="tab-content active" id="tab-home">
+            <div class="welcome-banner">
+                <div class="welcome-text">
+                    <span class="welcome-greeting">Welcome back,</span>
+                    <h1>{{ current_user.full_name }}! 👋</h1>
+                    {% set tier = current_user.get_tier() %}
+                    <div class="welcome-stats">
+                        <div class="w-stat"><div class="w-stat-num">{{ current_user.points }}</div><div class="w-stat-label">Points</div></div>
+                        <div class="w-stat"><div class="w-stat-num" style="color: {{ tier.color }}">{{ tier.name }}</div><div class="w-stat-label">Tier</div></div>
+                        <div class="w-stat"><div class="w-stat-num">#{{ rank }}</div><div class="w-stat-label">Rank</div></div>
+                        <div class="w-stat"><div class="w-stat-num">Lv.{{ current_user.level }}</div><div class="w-stat-label">Level</div></div>
+                    </div>
+                    <div class="referral-box" style="margin-top: 20px; padding: 10px 16px; background: rgba(0,0,0,0.15); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.1); display: inline-block;">
+                        <p style="margin:0; font-size:11px; color:rgba(255,255,255,0.7); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Referral Code (+500 XP)</p>
+                        <h3 style="margin:4px 0 0; font-family: monospace; letter-spacing: 2px; color: #ffffff;">{{ current_user.referral_code }}</h3>
+                    </div>
+                </div>
+                <div class="welcome-xp-ring">
+                    <svg viewBox="0 0 120 120" class="xp-ring">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#1D9E75" stroke-width="8" stroke-dasharray="339.29" stroke-dashoffset="{{ 339.29 - (339.29 * (current_user.points % 500) / 500) }}" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                    </svg>
+                    <div class="xp-ring-text">
+                        <strong>Lv.{{ current_user.level }}</strong>
+                        <span>{{ current_user.points % 500 }}/500</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Streak -->
+            <div class="content-card">
+                <div class="card-header"><h2><i class="fas fa-fire"></i> Weekly Streak</h2></div>
+                <div class="streak-track">
+                    {% for day in streak_days %}
+                    <div class="streak-day {{ 'active' if day.active else 'empty' }}">
+                        <div class="streak-dot"></div>
+                        <span>{{ day.day }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="streak-msg">{{ current_user.streak_count }}-day streak — {% if current_user.streak_count >= 5 %}incredible! 🔥{% elif current_user.streak_count >= 3 %}keep going! 💪{% else %}start building! 🚀{% endif %}</p>
+            </div>
+
+            <!-- Quick Tasks -->
+            <div class="content-card">
+                <div class="card-header"><h2><i class="fas fa-bolt"></i> Available Tasks</h2><span class="badge-count">{{ tasks|length }}</span></div>
+                {% for task in tasks[:3] %}
+                {% if task.id not in submitted_task_ids %}
+                <div class="task-row">
+                    <div class="task-row-info">
+                        <h4>{{ task.title }}</h4>
+                        <p>{{ task.description[:80] }}...</p>
+                        <div class="task-tags">
+                            <span class="tag cat-{{ task.category|lower|replace(' ','-') }}">{{ task.category }}</span>
+                            <span class="tag diff-{{ task.difficulty|lower }}">{{ task.difficulty }}</span>
+                        </div>
+                    </div>
+                    <div class="task-row-action">
+                        <span class="task-pts-badge">+{{ task.points }}</span>
+                        <button class="btn btn-primary btn-sm" onclick="openSubmitModal({{ task.id }}, '{{ task.title }}', {{ task.points }})">Submit</button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div class="tab-content" id="tab-tasks">
+            <div class="page-header"><h1>All Tasks</h1></div>
+            <div class="tasks-grid">
+                {% for task in tasks %}
+                <div class="task-card {{ 'completed' if task.id in submitted_task_ids else '' }}">
+                    <div class="task-card-header">
+                        <span class="task-category cat-{{ task.category|lower|replace(' ','-') }}">{{ task.category }}</span>
+                        <span class="task-difficulty diff-{{ task.difficulty|lower }}">{{ task.difficulty }}</span>
+                    </div>
+                    <h3>{{ task.title }}</h3>
+                    <p>{{ task.description[:120] }}{% if task.description|length > 120 %}...{% endif %}</p>
+                    {% if task.requirements %}<div class="task-req"><i class="fas fa-clipboard-list"></i> {{ task.requirements[:60] }}</div>{% endif %}
+                    <div class="task-card-footer">
+                        <span class="task-points"><i class="fas fa-bolt"></i> {{ task.points }} pts</span>
+                        {% if task.id in submitted_task_ids %}
+                        <span class="task-status done"><i class="fas fa-check"></i> Submitted</span>
+                        {% else %}
+                        <button class="btn btn-primary btn-sm" onclick="openSubmitModal({{ task.id }}, '{{ task.title }}', {{ task.points }})">Submit Proof</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Submissions Tab -->
+        <div class="tab-content" id="tab-submissions">
+            <div class="page-header"><h1>My Submissions</h1></div>
+            <div class="content-card">
+                {% for sub in my_submissions %}
+                <div class="submission-item">
+                    <div class="sub-header">
+                        <div><strong>{{ sub.task.title }}</strong><span class="sub-date">{{ sub.created_at.strftime('%b %d, %Y') if sub.created_at else '' }}</span></div>
+                        <span class="status-badge {{ sub.status }}">{{ sub.status|capitalize }}</span>
+                    </div>
+                    <p class="sub-proof">{{ sub.proof_text[:150] }}</p>
+                    {% if sub.ai_score %}
+                    {% set feedback = sub.ai_feedback|fromjson if sub.ai_feedback.startswith('{') else {'summary': sub.ai_feedback} %}
+                    <div class="ai-score-bar">
+                        <div class="score-label">AI Total</div>
+                        <div class="score-track"><div class="score-fill" style="width:{{ sub.ai_score }}%"></div></div>
+                        <div class="score-value">{{ sub.ai_score }}/100</div>
+                    </div>
+                    {% if feedback.grammar %}
+                    <div class="ai-metrics-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 11px;">
+                        <div>Grammar: {{ feedback.grammar }}% <div style="height:4px; background:var(--bg-secondary); border-radius:2px; margin-top:4px;"><div style="height:100%; width:{{ feedback.grammar }}%; background:var(--info); border-radius:2px;"></div></div></div>
+                        <div>Brand: {{ feedback.brand_alignment }}% <div style="height:4px; background:var(--bg-secondary); border-radius:2px; margin-top:4px;"><div style="height:100%; width:{{ feedback.brand_alignment }}%; background:var(--warning); border-radius:2px;"></div></div></div>
+                        <div>Creativity: {{ feedback.creativity }}% <div style="height:4px; background:var(--bg-secondary); border-radius:2px; margin-top:4px;"><div style="height:100%; width:{{ feedback.creativity }}%; background:var(--success); border-radius:2px;"></div></div></div>
+                    </div>
+                    {% endif %}
+                    <p class="ai-feedback" style="font-size: 13px; color: var(--text-secondary); background: var(--bg-secondary); padding: 12px; border-radius: var(--radius-md); border-left: 3px solid var(--primary);"><i class="fas fa-robot" style="color: var(--primary);"></i> <strong>AI Insight:</strong> {{ feedback.summary }}</p>
+                    {% endif %}
+                    {% if sub.points_awarded %}<div class="points-earned"><i class="fas fa-star"></i> +{{ sub.points_awarded }} points earned</div>{% endif %}
+                </div>
+                {% endfor %}
+                {% if not my_submissions %}<div class="empty-state"><i class="fas fa-paper-plane"></i><p>No submissions yet. Start completing tasks!</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Leaderboard Tab -->
+        <div class="tab-content" id="tab-leaderboard">
+            <div class="page-header"><h1>Leaderboard</h1></div>
+            <!-- Top 3 Podium -->
+            <div class="podium">
+                {% if leaderboard|length >= 3 %}
+                <div class="podium-item second">
+                    <div class="podium-avatar" style="background:{{ leaderboard[1].avatar_color }};color:{{ leaderboard[1].avatar_text_color }}">{{ leaderboard[1].get_initials() }}</div>
+                    <strong>{{ leaderboard[1].full_name }}</strong>
+                    <span>{{ leaderboard[1].points }} pts</span>
+                    <div class="podium-rank">2</div>
+                </div>
+                <div class="podium-item first">
+                    <div class="podium-crown">👑</div>
+                    <div class="podium-avatar" style="background:{{ leaderboard[0].avatar_color }};color:{{ leaderboard[0].avatar_text_color }}">{{ leaderboard[0].get_initials() }}</div>
+                    <strong>{{ leaderboard[0].full_name }}</strong>
+                    <span>{{ leaderboard[0].points }} pts</span>
+                    <div class="podium-rank">1</div>
+                </div>
+                <div class="podium-item third">
+                    <div class="podium-avatar" style="background:{{ leaderboard[2].avatar_color }};color:{{ leaderboard[2].avatar_text_color }}">{{ leaderboard[2].get_initials() }}</div>
+                    <strong>{{ leaderboard[2].full_name }}</strong>
+                    <span>{{ leaderboard[2].points }} pts</span>
+                    <div class="podium-rank">3</div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="content-card">
+                {% for user in leaderboard %}
+                <div class="leaderboard-row {{ 'highlight' if user.id == current_user.id else '' }}">
+                    <div class="lb-rank-num {{ 'gold' if loop.index == 1 else 'silver' if loop.index == 2 else 'bronze' if loop.index == 3 else '' }}">{{ loop.index }}</div>
+                    <div class="mini-avatar" style="background:{{ user.avatar_color }};color:{{ user.avatar_text_color }}">{{ user.get_initials() }}</div>
+                    <div class="lb-info"><strong>{{ user.full_name }}</strong><span>{{ user.college }}</span></div>
+                    <div class="lb-points">{{ user.points }} pts</div>
+                    <div class="lb-level">Lv.{{ user.level }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Badges Tab -->
+        <div class="tab-content" id="tab-badges">
+            <div class="page-header"><h1>Badges & Achievements</h1></div>
+            <div class="badges-grid">
+                {% for badge in all_badges %}
+                <div class="badge-card {{ 'earned' if badge.id in earned_ids else 'locked' }}">
+                    <div class="badge-icon-large">{{ badge.icon }}</div>
+                    <h3>{{ badge.name }}</h3>
+                    <p>{{ badge.description }}</p>
+                    <span class="badge-rarity rarity-{{ badge.rarity }}">{{ badge.rarity }}</span>
+                    {% if badge.id in earned_ids %}<span class="badge-earned-tag"><i class="fas fa-check"></i> Earned</span>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Events Tab -->
+        <div class="tab-content" id="tab-events">
+            <div class="page-header"><h1>Events</h1></div>
+            <div class="tasks-grid">
+                {% for event in events %}
+                <div class="task-card event-card">
+                    <div class="task-card-header">
+                        <span class="task-category">{{ event.event_type }}</span>
+                        {% if event.is_virtual %}<span class="tag virtual">Virtual</span>{% endif %}
+                    </div>
+                    <h3>{{ event.title }}</h3>
+                    <p>{{ event.description[:100] }}</p>
+                    <div class="event-meta"><i class="fas fa-calendar"></i> {{ event.start_date.strftime('%b %d, %Y at %I:%M %p') if event.start_date else 'TBD' }}</div>
+                    {% if event.location %}<div class="event-meta"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>{% endif %}
+                    <div class="task-card-footer">
+                        <span class="task-points"><i class="fas fa-bolt"></i> {{ event.points_reward }} pts</span>
+                        {% if event.id in my_event_ids %}
+                        <span class="task-status done"><i class="fas fa-check"></i> Registered</span>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('register_event', eid=event.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-primary btn-sm">Register</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not events %}<div class="empty-state"><i class="fas fa-calendar-alt"></i><p>No events available right now.</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Inbox Tab -->
+        <div class="tab-content" id="tab-inbox">
+            <div class="page-header"><h1>Inbox</h1></div>
+            <div class="content-card">
+                {% for msg in messages %}
+                <div class="message-item {{ 'unread' if not msg.is_read else '' }}">
+                    <div class="msg-header">
+                        <strong>{{ msg.subject or 'No Subject' }}</strong>
+                        <span>{{ msg.created_at.strftime('%b %d') if msg.created_at else '' }}</span>
+                    </div>
+                    <p>{{ msg.body }}</p>
+                    <span class="msg-from"><i class="fas fa-user"></i> From: {{ msg.sender.full_name if msg.sender else 'System' }}</span>
+                </div>
+                {% endfor %}
+                {% if not messages %}<div class="empty-state"><i class="fas fa-envelope-open"></i><p>Your inbox is empty.</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Wallet Tab -->
+        <div class="tab-content" id="tab-wallet">
+            <div class="page-header"><h1>CampusCoins Wallet</h1></div>
+            <div class="content-card" style="text-align: center; background: radial-gradient(circle at top, rgba(29, 158, 117, 0.1), transparent); border-color: rgba(29,158,117,0.3);">
+                <i class="fas fa-coins" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>
+                <h2 style="font-size: 36px; margin-bottom: 8px;">{{ current_user.points }} <span style="font-size: 16px; color: var(--text-muted);">CC</span></h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Your digital token balance. Exchange for merch, gift cards, or exclusive event access.</p>
+                <div style="display: flex; gap: 16px; justify-content: center;">
+                    <button class="btn btn-primary"><i class="fas fa-shopping-cart"></i> Redeem</button>
+                    <button class="btn btn-outline"><i class="fas fa-history"></i> History</button>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <div class="card-header"><h2><i class="fas fa-gift"></i> Exclusive Offers</h2></div>
+                <div class="tasks-grid">
+                    <div class="task-card">
+                        <h3>Campus Hoodie</h3>
+                        <p>Premium 100% cotton hoodie.</p>
+                        <div class="task-card-footer" style="margin-top: auto; border:none; padding-top:0;"><span style="color:#f59e0b; font-weight:bold;">1500 CC</span><button class="btn btn-outline btn-sm">Claim</button></div>
+                    </div>
+                    <div class="task-card">
+                        <h3>$10 Amazon Card</h3>
+                        <p>Digital gift card.</p>
+                        <div class="task-card-footer" style="margin-top: auto; border:none; padding-top:0;"><span style="color:#f59e0b; font-weight:bold;">2000 CC</span><button class="btn btn-outline btn-sm">Claim</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Activity Feed -->
+<div class="live-feed-panel" id="liveFeed">
+    <div class="feed-header"><i class="fas fa-bolt" style="color: var(--warning);"></i> Live Campus Activity</div>
+    <div class="feed-items" id="feedItems">
+        <!-- Feed items injected via JS -->
+    </div>
+</div>
+
+<!-- Submit Modal -->
+<div class="modal-overlay" id="submitModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="submitModalTitle">Submit Proof</h2>
+            <button class="modal-close" onclick="closeSubmitModal()">&times;</button>
+        </div>
+        <form method="POST" id="submitForm" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="modal-subtitle">Describe what you did and provide proof links.</p>
+            <div class="form-group">
+                <label>Proof Description</label>
+                <textarea name="proof_text" rows="4" required placeholder="e.g. Posted the story at 5pm, here is the screenshot..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Proof Link (optional)</label>
+                <input type="text" name="proof_link" placeholder="https://instagram.com/p/...">
+            </div>
+            <div class="ai-preview" id="aiPreview" style="display:none;">
+                <div class="ai-score-display"><span class="ai-big-score" id="aiScoreNum">--</span><span>/100</span></div>
+                <p id="aiFeedbackText"></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" id="aiScoreBtn" onclick="getAIScore()"><i class="fas fa-robot"></i> AI Auto-Score</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openSubmitModal(taskId, taskTitle, pts) {
+    document.getElementById('submitModalTitle').textContent = 'Submit: ' + taskTitle + ' (+' + pts + ' pts)';
+    document.getElementById('submitForm').action = '/amb/submit/' + taskId;
+    document.getElementById('aiPreview').style.display = 'none';
+    document.getElementById('submitModal').style.display = 'flex';
+}
+function closeSubmitModal() { document.getElementById('submitModal').style.display = 'none'; }
+
+async function getAIScore() {
+    const proof = document.querySelector('#submitForm textarea[name=proof_text]').value;
+    if (!proof.trim()) { alert('Please describe your submission first.'); return; }
+    const btn = document.getElementById('aiScoreBtn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scoring...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/ai-score', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({proof: proof, task: document.getElementById('submitModalTitle').textContent})
+        });
+        const data = await res.json();
+        let fText = data.feedback;
+        try {
+            const fObj = JSON.parse(data.feedback);
+            fText = `Grammar: ${fObj.grammar}% | Brand: ${fObj.brand_alignment}% | Creativity: ${fObj.creativity}%\nSummary: ${fObj.summary}`;
+        } catch(e) {}
+        document.getElementById('aiScoreNum').textContent = data.score;
+        document.getElementById('aiFeedbackText').innerText = fText;
+        document.getElementById('aiPreview').style.display = 'block';
+        btn.innerHTML = '<i class="fas fa-check"></i> Scored!';
+    } catch(e) { btn.innerHTML = '<i class="fas fa-robot"></i> Retry'; btn.disabled = false; }
+}
+
+// Global Activity Listener
+const socket = io();
+socket.on('global_activity', function(data) {
+    const feedItems = document.getElementById('feedItems');
+    const div = document.createElement('div');
+    div.className = 'feed-item';
+    div.innerHTML = `
+        <div class="feed-avatar" style="background:${data.color}; color:#fff;">${data.avatar}</div>
+        <div class="feed-content">
+            <span class="feed-user">${data.user}</span> <span class="feed-action">${data.action.replace('_', ' ')}</span>
+            <div style="font-size:11px; opacity:0.7;">Just now</div>
+        </div>
+        ${data.pts > 0 ? `<div class="feed-pts">+${data.pts} XP</div>` : ''}
+    `;
+    feedItems.prepend(div);
+    if(feedItems.children.length > 8) feedItems.lastChild.remove();
+});
+</script>
+{% endblock %}

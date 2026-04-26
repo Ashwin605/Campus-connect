@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% block title %}Org Dashboard — CampusConnect{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-label">Management</div>
+            <a class="sidebar-link active" onclick="showTab('overview', this)"><i class="fas fa-th-large"></i><span>Overview</span></a>
+            <a class="sidebar-link" onclick="showTab('tasks', this)"><i class="fas fa-tasks"></i><span>Tasks</span><span class="sidebar-count">{{ tasks|length }}</span></a>
+            <a class="sidebar-link" onclick="showTab('submissions', this)"><i class="fas fa-inbox"></i><span>Submissions</span>{% if pending %}<span class="sidebar-count pulse">{{ pending|length }}</span>{% endif %}</a>
+            <a class="sidebar-link" onclick="showTab('ambassadors', this)"><i class="fas fa-users"></i><span>Ambassadors</span><span class="sidebar-count">{{ ambassadors|length }}</span></a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Engagement</div>
+            <a class="sidebar-link" onclick="showTab('events', this)"><i class="fas fa-calendar-alt"></i><span>Events</span></a>
+            <a class="sidebar-link" onclick="showTab('messages', this)"><i class="fas fa-paper-plane"></i><span>Broadcast</span></a>
+            <a class="sidebar-link" onclick="showTab('analytics', this)"><i class="fas fa-chart-bar"></i><span>Analytics</span></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="dashboard-main">
+        <!-- Overview Tab -->
+        <div class="tab-content active" id="tab-overview">
+            <div class="page-header">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Welcome back, {{ current_user.org_name or current_user.full_name }}</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" onclick="showTab('analytics', document.querySelector('[onclick*=analytics]'))"><i class="fas fa-chart-bar"></i> View Analytics</button>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card gradient-1">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ ambassadors|length }}</div>
+                        <div class="stat-label">Total Ambassadors</div>
+                    </div>
+                </div>
+                <div class="stat-card gradient-2">
+                    <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ tasks|length }}</div>
+                        <div class="stat-label">Active Tasks</div>
+                    </div>
+                </div>
+                <div class="stat-card gradient-3">
+                    <div class="stat-icon"><i class="fas fa-inbox"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ total_submissions }}</div>
+                        <div class="stat-label">Total Submissions</div>
+                    </div>
+                </div>
+                <div class="stat-card gradient-4">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-number">{{ approved_submissions }}</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Review -->
+            {% if pending %}
+            <div class="content-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-clock"></i> Pending Review</h2>
+                    <span class="badge-count">{{ pending|length }}</span>
+                </div>
+                {% for sub in pending[:5] %}
+                <div class="submission-item" id="sub-{{ sub.id }}">
+                    <div class="sub-header">
+                        <div class="sub-user">
+                            <div class="mini-avatar" style="background:{{ sub.ambassador.avatar_color }};color:{{ sub.ambassador.avatar_text_color }}">{{ sub.ambassador.get_initials() }}</div>
+                            <div>
+                                <strong>{{ sub.ambassador.full_name }}</strong>
+                                <span class="sub-task-name">{{ sub.task.title }}</span>
+                            </div>
+                        </div>
+                        <div class="sub-points">+{{ sub.task.points }} pts</div>
+                    </div>
+                    <p class="sub-proof">{{ sub.proof_text }}</p>
+                    {% if sub.proof_link %}<a href="{{ sub.proof_link }}" target="_blank" class="sub-link"><i class="fas fa-link"></i> {{ sub.proof_link[:50] }}</a>{% endif %}
+                    {% if sub.ai_score %}
+                    <div class="ai-score-bar">
+                        <div class="score-label">AI Score</div>
+                        <div class="score-track"><div class="score-fill" style="width:{{ sub.ai_score }}%"></div></div>
+                        <div class="score-value">{{ sub.ai_score }}/100</div>
+                    </div>
+                    {% endif %}
+                    <div class="sub-actions">
+                        <form method="POST" action="{{ url_for('review_submission', sid=sub.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="approve">
+                            <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Approve</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('review_submission', sid=sub.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Reject</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Top Performers -->
+            <div class="content-card">
+                <div class="card-header"><h2><i class="fas fa-trophy"></i> Top Performers</h2></div>
+                {% for amb in ambassadors[:5] %}
+                <div class="leaderboard-row">
+                    <div class="lb-rank-num {{ 'gold' if loop.index == 1 else 'silver' if loop.index == 2 else 'bronze' if loop.index == 3 else '' }}">{{ loop.index }}</div>
+                    <div class="mini-avatar" style="background:{{ amb.avatar_color }};color:{{ amb.avatar_text_color }}">{{ amb.get_initials() }}</div>
+                    <div class="lb-info"><strong>{{ amb.full_name }}</strong><span>{{ amb.college }}</span></div>
+                    <div class="lb-points">{{ amb.points }} pts</div>
+                    <div class="lb-level">Lv.{{ amb.level }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div class="tab-content" id="tab-tasks">
+            <div class="page-header">
+                <h1>Task Management</h1>
+                <button class="btn btn-primary" onclick="document.getElementById('createTaskModal').style.display='flex'"><i class="fas fa-plus"></i> Create Task</button>
+            </div>
+            <div class="tasks-grid">
+                {% for task in tasks %}
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span class="task-category cat-{{ task.category|lower|replace(' ', '-') }}">{{ task.category }}</span>
+                        <span class="task-difficulty diff-{{ task.difficulty|lower }}">{{ task.difficulty }}</span>
+                    </div>
+                    <h3>{{ task.title }}</h3>
+                    <p>{{ task.description[:120] }}{% if task.description|length > 120 %}...{% endif %}</p>
+                    <div class="task-card-footer">
+                        <span class="task-points"><i class="fas fa-bolt"></i> {{ task.points }} pts</span>
+                        <span class="task-subs"><i class="fas fa-inbox"></i> {{ task.submission_count() }} submitted</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Submissions Tab -->
+        <div class="tab-content" id="tab-submissions">
+            <div class="page-header"><h1>All Submissions</h1></div>
+            <div class="content-card">
+                {% for sub in pending %}
+                <div class="submission-item">
+                    <div class="sub-header">
+                        <div class="sub-user">
+                            <div class="mini-avatar" style="background:{{ sub.ambassador.avatar_color }};color:{{ sub.ambassador.avatar_text_color }}">{{ sub.ambassador.get_initials() }}</div>
+                            <div><strong>{{ sub.ambassador.full_name }}</strong><span class="sub-task-name">{{ sub.task.title }}</span></div>
+                        </div>
+                        <span class="status-badge pending">Pending</span>
+                    </div>
+                    <p class="sub-proof">{{ sub.proof_text }}</p>
+                    {% if sub.ai_score %}
+                    <div class="ai-score-bar">
+                        <div class="score-label">AI Score</div>
+                        <div class="score-track"><div class="score-fill" style="width:{{ sub.ai_score }}%"></div></div>
+                        <div class="score-value">{{ sub.ai_score }}/100</div>
+                    </div>
+                    {% endif %}
+                    <div class="sub-actions">
+                        <form method="POST" action="{{ url_for('review_submission', sid=sub.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="approve">
+                            <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Approve</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('review_submission', sid=sub.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Reject</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not pending %}<div class="empty-state"><i class="fas fa-check-circle"></i><p>All submissions reviewed!</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Ambassadors Tab -->
+        <div class="tab-content" id="tab-ambassadors">
+            <div class="page-header"><h1>Ambassadors</h1></div>
+            <div class="ambassador-grid">
+                {% for amb in ambassadors %}
+                <div class="ambassador-card">
+                    <div class="amb-card-avatar" style="background:{{ amb.avatar_color }};color:{{ amb.avatar_text_color }}">{{ amb.get_initials() }}</div>
+                    <h3>{{ amb.full_name }}</h3>
+                    <span class="amb-college">{{ amb.college }}</span>
+                    <div class="amb-stats">
+                        <div><strong>{{ amb.points }}</strong><span>Points</span></div>
+                        <div><strong>Lv.{{ amb.level }}</strong><span>Level</span></div>
+                        <div><strong>{{ amb.streak_count }}</strong><span>Streak</span></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Events Tab -->
+        <div class="tab-content" id="tab-events">
+            <div class="page-header">
+                <h1>Events</h1>
+                <button class="btn btn-primary" onclick="document.getElementById('createEventModal').style.display='flex'"><i class="fas fa-plus"></i> Create Event</button>
+            </div>
+            <div class="tasks-grid">
+                {% for event in events %}
+                <div class="task-card event-card">
+                    <div class="task-card-header">
+                        <span class="task-category">{{ event.event_type }}</span>
+                        <span class="task-difficulty">{{ event.attendee_count() }} attending</span>
+                    </div>
+                    <h3>{{ event.title }}</h3>
+                    <p>{{ event.description[:100] }}</p>
+                    <div class="task-card-footer">
+                        <span><i class="fas fa-calendar"></i> {{ event.start_date.strftime('%b %d, %Y') if event.start_date else 'TBD' }}</span>
+                        <span class="task-points"><i class="fas fa-bolt"></i> {{ event.points_reward }} pts</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not events %}<div class="empty-state"><i class="fas fa-calendar-alt"></i><p>No events yet. Create your first!</p></div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div class="tab-content" id="tab-messages">
+            <div class="page-header"><h1>Broadcast Message</h1></div>
+            <div class="content-card">
+                <form method="POST" action="{{ url_for('broadcast_message') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group"><label>Subject</label><input type="text" name="subject" placeholder="Message subject" required></div>
+                    <div class="form-group"><label>Message</label><textarea name="body" rows="5" placeholder="Your message to all ambassadors..." required></textarea></div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send to All Ambassadors</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div class="tab-content" id="tab-analytics">
+            <div class="page-header"><h1>Analytics</h1></div>
+            <div class="charts-grid">
+                <div class="content-card chart-card"><div class="card-header"><h2>Submissions This Week</h2></div><canvas id="weeklyChart"></canvas></div>
+                <div class="content-card chart-card"><div class="card-header"><h2>Tasks by Category</h2></div><canvas id="categoryChart"></canvas></div>
+            </div>
+            <div class="content-card">
+                <div class="card-header"><h2><i class="fas fa-history"></i> Recent Activity</h2></div>
+                {% for log in recent_logs %}
+                <div class="activity-row">
+                    <div class="activity-icon"><i class="fas fa-circle"></i></div>
+                    <div class="activity-info"><strong>{{ log.user.full_name if log.user else 'System' }}</strong> — {{ log.action }} {% if log.details %}({{ log.details }}){% endif %}</div>
+                    <div class="activity-time">{{ log.created_at.strftime('%b %d, %H:%M') if log.created_at else '' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal-overlay" id="createTaskModal">
+    <div class="modal">
+        <div class="modal-header"><h2>Create New Task</h2><button class="modal-close" onclick="this.closest('.modal-overlay').style.display='none'">&times;</button></div>
+        <form method="POST" action="{{ url_for('create_task') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="e.g. Instagram Story Post"></div>
+            <div class="form-group"><label>Description</label><textarea name="description" rows="3" required placeholder="What should ambassadors do?"></textarea></div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Points</label><input type="number" name="points" value="100" min="10" max="1000"></div>
+                <div class="form-group"><label>Difficulty</label><select name="difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option></select></div>
+            </div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Category</label><select name="category"><option>Social Media</option><option>Referral</option><option>Content Creation</option><option>Event Promotion</option><option>General</option></select></div>
+                <div class="form-group"><label>Priority</label><select name="priority"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+            </div>
+            <div class="form-group"><label>Deadline</label><input type="datetime-local" name="deadline"></div>
+            <div class="form-group"><label>Requirements</label><textarea name="requirements" rows="2" placeholder="Any specific requirements..."></textarea></div>
+            <button type="submit" class="btn btn-primary full-width"><i class="fas fa-plus"></i> Create Task</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create Event Modal -->
+<div class="modal-overlay" id="createEventModal">
+    <div class="modal">
+        <div class="modal-header"><h2>Create Event</h2><button class="modal-close" onclick="this.closest('.modal-overlay').style.display='none'">&times;</button></div>
+        <form method="POST" action="{{ url_for('create_event') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group"><label>Title</label><input type="text" name="title" required placeholder="Event title"></div>
+            <div class="form-group"><label>Description</label><textarea name="description" rows="3" required></textarea></div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Type</label><select name="event_type"><option>workshop</option><option>webinar</option><option>meetup</option><option>hackathon</option><option>contest</option></select></div>
+                <div class="form-group"><label>Points Reward</label><input type="number" name="points_reward" value="50"></div>
+            </div>
+            <div class="form-group"><label>Location</label><input type="text" name="location" placeholder="Venue or Online"></div>
+            <div class="form-row-2">
+                <div class="form-group"><label>Start</label><input type="datetime-local" name="start_date" required></div>
+                <div class="form-group"><label>End</label><input type="datetime-local" name="end_date"></div>
+            </div>
+            <label class="checkbox-label"><input type="checkbox" name="is_virtual"> Virtual Event</label>
+            <div class="form-group"><label>Meeting Link</label><input type="text" name="meeting_link" placeholder="https://zoom.us/..."></div>
+            <button type="submit" class="btn btn-primary full-width"><i class="fas fa-calendar-plus"></i> Create Event</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const weeklyData = {{ weekly_data|safe }};
+const catData = {{ chart_categories|safe }};
+
+function initCharts() {
+    const weeklyCtx = document.getElementById('weeklyChart');
+    if (weeklyCtx) {
+        new Chart(weeklyCtx, {
+            type: 'bar',
+            data: {
+                labels: weeklyData.map(d => d.date),
+                datasets: [{label:'Submissions', data: weeklyData.map(d => d.count), backgroundColor:'rgba(29,158,117,0.7)', borderRadius:8, borderSkipped:false}]
+            },
+            options: {responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}}}
+        });
+    }
+    const catCtx = document.getElementById('categoryChart');
+    if (catCtx) {
+        const colors = ['#1D9E75','#AFA9EC','#FAC775','#F5C4B3','#B5D4F4'];
+        new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(catData),
+                datasets: [{data: Object.values(catData), backgroundColor: colors, borderWidth:0}]
+            },
+            options: {responsive:true, plugins:{legend:{position:'bottom',labels:{color:'#9ca3af',padding:12}}}}
+        });
+    }
+}
+setTimeout(initCharts, 100);
+</script>
+{% endblock %}
